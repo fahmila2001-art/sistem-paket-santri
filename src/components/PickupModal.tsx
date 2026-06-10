@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { db } from '../lib/db';
 import { Package } from '../lib/types';
 import { X, UserCheck, Clock } from 'lucide-react';
 
@@ -37,14 +37,14 @@ export default function PickupModal({ pkg, onClose, onSaved }: Props) {
       updates.picker_relation = pickerRelation.trim() || null;
     }
 
-    const { error } = await supabase.from('packages').update(updates).eq('id', pkg.id);
+    const { error } = await db.updatePackage(pkg.id, updates);
     setSaving(false);
     if (!error) onSaved();
   }
 
   async function markDone() {
     setSaving(true);
-    const { error } = await supabase.from('packages').update({ status: 'done' }).eq('id', pkg.id);
+    const { error } = await db.updatePackage(pkg.id, { status: 'done' });
     setSaving(false);
     if (!error) onSaved();
   }

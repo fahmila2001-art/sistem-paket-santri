@@ -1,7 +1,10 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { Session, User } from '@supabase/supabase-js';
-import { supabase } from './supabase';
+import { db } from './db';
 import { Profile } from './types';
+
+// Mock types
+type User = { id: string; email: string };
+type Session = { user: User };
 
 interface AuthContextType {
   user: User | null;
@@ -22,14 +25,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
+    db.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) fetchProfile(s.user.id);
       else setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
+    const { data: { subscription } } = db.auth.onAuthStateChange((_e, s) => {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) fetchProfile(s.user.id);
@@ -40,27 +43,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function fetchProfile(userId: string) {
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    const { data } = await db.getProfile(userId);
     setProfile(data);
     setLoading(false);
   }
 
   async function signIn(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ?? null };
+    const { error } = await db.auth.signIn({ email, password });
+    if (!error) {
+      const { data: { session: s } } = await db.auth.getSession();
+      setSession(s);
+      setUser(s?.user ?? null);
+      if (s?.user) fetchProfile(s.user.id);
+    }
+    return { error };
   }
 
   async function signUp(email: string, password: string, fullName: string) {
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) return { error: error.message };
+    const { data, error } = await db.auth.signUp({ email, password });
+    if (error) return { error };
     if (data.user) {
-      await supabase.from('profiles').insert({ id: data.user.id, full_name: fullName, role: 'satpam' });
+      // In mock, we already have a dummy profile initialized
+      const { data: { session: s } } = await db.auth.getSession();
+      setSession(s);
+      setUser(s?.user ?? null);
+      if (s?.user) fetchProfile(s.user.id);
     }
     return { error: null };
   }
 
   async function signOut() {
-    await supabase.auth.signOut();
+    await db.auth.signOut();
     setUser(null);
     setProfile(null);
     setSession(null);

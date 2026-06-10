@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { db } from '../lib/db';
 import { useAuth } from '../lib/auth';
 import { Package } from '../lib/types';
-import { PackagePlus, X, User, Send, Box, Clock, FileText } from 'lucide-react';
+import { PackagePlus, X, User, Send, Box, Clock, FileText, Camera } from 'lucide-react';
 
 interface Props {
   onClose: () => void;
@@ -20,18 +20,51 @@ export default function PackageForm({ onClose, onSaved }: Props) {
     contents: '',
     notes: '',
     received_at: new Date().toISOString().slice(0, 16),
+    imageData: null as string | null,
   });
 
-  function update(field: string, value: string) {
+  function update(field: string, value: any) {
     setForm(prev => ({ ...prev, [field]: value }));
   }
+
+  const handleCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > MAX_WIDTH) {
+          height = Math.round(height * (MAX_WIDTH / width));
+          width = MAX_WIDTH;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+        update('imageData', dataUrl);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.recipient_name.trim() || !form.sender_name.trim() || !form.contents.trim()) return;
     setSaving(true);
 
-    const { error } = await supabase.from('packages').insert({
+    const { error } = await db.insertPackage({
       recipient_name: form.recipient_name.trim(),
       recipient_room: form.recipient_room.trim() || null,
       sender_name: form.sender_name.trim(),
@@ -41,6 +74,7 @@ export default function PackageForm({ onClose, onSaved }: Props) {
       received_at: new Date(form.received_at).toISOString(),
       received_by: user?.id,
       status: 'masuk',
+      image_data: form.imageData,
     });
 
     setSaving(false);
@@ -106,6 +140,28 @@ export default function PackageForm({ onClose, onSaved }: Props) {
             <label className={labelStyle}><FileText className="w-4 h-4 inline mr-1" /> Catatan</label>
             <input type="text" value={form.notes} onChange={e => update('notes', e.target.value)}
               placeholder="Catatan tambahan (opsional)" className={fieldStyle} />
+          </div>
+
+          <div>
+            <label className={labelStyle}><Camera className="w-4 h-4 inline mr-1" /> Foto Bukti Paket</label>
+            {form.imageData ? (
+              <div className="relative mb-2">
+                <img src={form.imageData} alt="Preview" className="w-full h-48 object-cover rounded-xl border border-slate-200" />
+                <button type="button" onClick={() => update('imageData', null)}
+                  className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-lg hover:bg-black/70 backdrop-blur-sm">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="relative">
+                <input type="file" accept="image/*" capture="environment" onChange={handleCapture}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                <div className="w-full h-24 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-slate-500 hover:border-emerald-500 hover:text-emerald-500 hover:bg-emerald-50 transition-colors">
+                  <Camera className="w-6 h-6 mb-1" />
+                  <span className="text-sm font-medium">Ambil Foto / Upload</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3 pt-2">

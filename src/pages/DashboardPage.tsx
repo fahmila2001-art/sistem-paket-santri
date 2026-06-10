@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { db } from '../lib/db';
 import { useAuth } from '../lib/auth';
 import { Package as PackageT } from '../lib/types';
 import PackageForm from '../components/PackageForm';
@@ -19,7 +19,8 @@ export default function DashboardPage() {
   const [showRecap, setShowRecap] = useState(false);
 
   const fetchPackages = useCallback(async () => {
-    const { data } = await supabase.from('packages').select('*').order('received_at', { ascending: false });
+    const data = await db.getPackages();
+    data.sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime());
     setPackages(data || []);
     setLoading(false);
   }, []);

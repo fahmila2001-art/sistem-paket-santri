@@ -59,6 +59,15 @@ export default function PackageCard({ pkg, onPickup }: Props) {
           {pkg.notes && <p className="text-xs text-slate-500 mt-1">Catatan: {pkg.notes}</p>}
         </div>
 
+        {pkg.image_data && (
+          <div className="mb-3 rounded-lg overflow-hidden border border-slate-200 bg-slate-50 relative group">
+            <img src={pkg.image_data} alt="Bukti Paket" className="w-full h-32 object-cover group-hover:h-auto group-hover:max-h-96 transition-all duration-300" />
+            <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded-md opacity-100 group-hover:opacity-0 transition-opacity">
+              Foto Bukti
+            </div>
+          </div>
+        )}
+
         {pkg.picked_up_by && (
           <div className="flex items-center gap-2 text-sm text-slate-600 mb-3">
             <User className="w-3.5 h-3.5 text-emerald-500" />

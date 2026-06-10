@@ -14,6 +14,7 @@ export interface Package {
   picker_relation: string | null;
   picked_up_at: string | null;
   status: 'masuk' | 'diambil' | 'done';
+  image_data?: string | null;
   created_at: string;
   updated_at: string;
 }

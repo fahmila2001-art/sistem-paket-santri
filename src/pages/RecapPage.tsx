@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { db } from '../lib/db';
 import { Package } from '../lib/types';
 import { BarChart3, Calendar, ArrowLeft, Download, TrendingUp, Package as PackageIcon, CheckCircle2, Inbox, ArrowRightCircle } from 'lucide-react';
 
@@ -21,12 +21,11 @@ export default function RecapPage({ onBack }: { onBack: () => void }) {
     const start = new Date(year, month - 1, 1).toISOString();
     const end = new Date(year, month, 1).toISOString();
 
-    const { data } = await supabase
-      .from('packages')
-      .select('*')
-      .gte('received_at', start)
-      .lt('received_at', end)
-      .order('received_at', { ascending: false });
+    const allPackages = await db.getPackages();
+    const data = allPackages.filter(p => {
+      const d = new Date(p.received_at).getTime();
+      return d >= new Date(start).getTime() && d < new Date(end).getTime();
+    }).sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime());
 
     setPackages(data || []);
     setLoading(false);
